@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
@@ -59,7 +56,7 @@ namespace YoutubeDownloader
             if (File.Exists("settings.xml"))
             {
                 try
-                {                    
+                {
                     var doc = XDocument.Load("settings.xml");
                     var fr = doc.Descendants("settings").First();
                     var ext = fr.Element("extras");
@@ -96,7 +93,15 @@ namespace YoutubeDownloader
             try
             {
                 new Uri(textBox2.Text);
-                listView1.Items.Add(new ListViewItem(textBox2.Text) { Tag = textBox2.Text });
+                for (int i = 0; i < listView1.Items.Count; i++)
+                {
+                    if (listView1.Items[i].Text == textBox2.Text)
+                    {
+                        Stuff.Warning($"{textBox2.Text} already was added", this);
+                        return;
+                    }
+                }
+                listView1.Items.Add(new ListViewItem(new string[] { textBox2.Text, string.Empty, string.Empty }) { Tag = DownloadFileInfo.Create(textBox2.Text) });
                 textBox2.Text = string.Empty;
 
                 textBox2.BackColor = Color.White;
@@ -139,6 +144,9 @@ namespace YoutubeDownloader
             p.StartInfo.RedirectStandardError = true;
             p.Exited += P_Exited;
             p.StartInfo.RedirectStandardOutput = true;
+
+            lastDownloadInfo = null;
+
             p.Start();
 
             p.BeginOutputReadLine();
@@ -153,10 +161,79 @@ namespace YoutubeDownloader
             }));
         }
 
+        ListViewItem GetListItem(string hash)
+        {
+            ListViewItem ret = null;
+            listView1.Invoke((Action)(() =>
+            {
+                for (int i = 0; i < listView1.Items.Count; i++)
+                {
+                    var d = (listView1.Items[i].Tag as DownloadFileInfo);
+                    if (d.Url.Contains(hash))
+                    {
+                        ret = listView1.Items[i];
+                        break;
+                    }
+                }
+
+            }));
+            return ret;
+        }
+
+        void UpdateListViewItem(ListViewItem item, Action<ListViewItem> action)
+        {
+            listView1.Invoke((Action)(() =>
+            {
+                action(item);
+            }));
+        }
+
+        DownloadFileInfo lastDownloadInfo = null;
         private void P_OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
             if (e.Data == null) return;
+            
+            if (e.Data.Contains("has already been downloaded"))
+            {
+                var ind = e.Data.IndexOf(':');
+                var name = e.Data.Substring(ind + 1).Replace("[download]", "").Replace("has already been downloaded", "").Trim();
+                var ind2 = e.Data.LastIndexOf('[');
+                var ind3 = e.Data.LastIndexOf(']');
+                var url = e.Data.Substring(ind2 + 1, ind3 - ind2 - 1);
+                var l = GetListItem(url);
+                UpdateListViewItem(l, (item) =>
+                {
+                    item.SubItems[1].Text = name;
+                    item.SubItems[2].Text = "100%";
+                });
 
+                (l.Tag as DownloadFileInfo).FilePath = name;
+                lastDownloadInfo = l.Tag as DownloadFileInfo;
+            }
+            else if (e.Data.Contains("Destination"))
+            {
+
+                try
+                {
+                    var ind = e.Data.IndexOf(':');
+                    var name = e.Data.Substring(ind + 1).Trim();
+                    var ind2 = e.Data.LastIndexOf('[');
+                    var ind3 = e.Data.LastIndexOf(']');
+                    var url = e.Data.Substring(ind2 + 1, ind3 - ind2 - 1);
+                    var l = GetListItem(url);
+
+                    UpdateListViewItem(l, (item) =>
+                    {
+                        item.SubItems[1].Text = name;
+                    });
+                    (l.Tag as DownloadFileInfo).FilePath = name;
+                    lastDownloadInfo = l.Tag as DownloadFileInfo;
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
             if (e.Data.Contains("%"))
             {
                 var arr = e.Data.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
@@ -168,6 +245,15 @@ namespace YoutubeDownloader
                         try
                         {
                             var val = float.Parse(perc.Replace(",", "."), CultureInfo.InvariantCulture);
+                            if (lastDownloadInfo != null)
+                            {
+                                var l = GetListItem(lastDownloadInfo.Hash);
+                                UpdateListViewItem(l, (item) =>
+                                {
+                                    item.SubItems[2].Text = (int)Math.Round(val) + "%";
+                                });
+                            }
+
                             progressBar1.Invoke((Action)(() =>
                             {
                                 progressBar1.Value = (int)Math.Round(val);
@@ -248,16 +334,32 @@ namespace YoutubeDownloader
             listView1.Items.Clear();
             foreach (var item in doc.Descendants("url"))
             {
-                listView1.Items.Add(new ListViewItem(item.Value) { Tag = item.Value });
+                listView1.Items.Add(new ListViewItem(new string[] { item.Value, string.Empty, string.Empty }) { Tag = DownloadFileInfo.Create(item.Value) });
             }
         }
-    }
 
-    public static class Stuff
-    {
-        public static DialogResult Warning(string v, Form f)
+        private void fileToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            return MessageBox.Show(v, f.Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (listView1.SelectedItems.Count == 0) return;
+            var d = (listView1.SelectedItems[0].Tag as DownloadFileInfo);
+            if (!d.IsDownloaded) return;
+
+            Process.Start(Path.Combine("Downloads", d.FilePath));
+        }
+
+        private void browserToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count == 0) return;
+            Process.Start(listView1.SelectedItems[0].Text);
+        }
+
+        private void listView1_DoubleClick(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count == 0) return;
+            var d = (listView1.SelectedItems[0].Tag as DownloadFileInfo);
+            if (!d.IsDownloaded) return;
+
+            Process.Start(Path.Combine("Downloads", d.FilePath));
         }
     }
 }
