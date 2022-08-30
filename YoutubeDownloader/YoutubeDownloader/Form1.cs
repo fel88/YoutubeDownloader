@@ -113,25 +113,15 @@ namespace YoutubeDownloader
                 textBox2.ForeColor = Color.White;
             }
         }
+
         Process p;
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-            if (!File.Exists(textBox1.Text))
-            {
-                Stuff.Warning($"File {textBox1.Text} doesn't exist", this);
-                return;
-            }
-
-            StringBuilder sb = new StringBuilder();
-            foreach (var item in listView1.Items)
-            {
-                sb.Append((item as ListViewItem).Text + " ");
-            }
+        void download(string exePath, string args)
+        {            
             Directory.CreateDirectory("Downloads");
-            ProcessStartInfo pci = new ProcessStartInfo(textBox1.Text)
+            ProcessStartInfo pci = new ProcessStartInfo(exePath)
             {
-                Arguments = sb.ToString(),
+                Arguments = args,
                 WorkingDirectory = "Downloads",
                 CreateNoWindow = true
             };
@@ -151,6 +141,23 @@ namespace YoutubeDownloader
 
             p.BeginOutputReadLine();
         }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (!File.Exists(textBox1.Text))
+            {
+                Stuff.Warning($"File {textBox1.Text} doesn't exist", this);
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            foreach (var item in listView1.Items)
+            {
+                sb.Append((item as ListViewItem).Text + " ");
+            }
+            download(textBox1.Text, sb.ToString());
+        }
+
         private void P_Exited(object sender, EventArgs e)
         {
             richTextBox1.Invoke((Action)(() =>
@@ -360,6 +367,44 @@ namespace YoutubeDownloader
             if (!d.IsDownloaded) return;
 
             Process.Start(Path.Combine("Downloads", d.FilePath));
+        }
+
+        private void downloadSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (!File.Exists(textBox1.Text))
+            {
+                Stuff.Warning($"File {textBox1.Text} doesn't exist", this);
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            foreach (var item in listView1.SelectedItems)
+            {
+                sb.Append((item as ListViewItem).Text + " ");
+            }
+            download(textBox1.Text, sb.ToString());
+        }
+
+        private void pasteURLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var txt = Clipboard.GetText();
+                new Uri(txt);
+                for (int i = 0; i < listView1.Items.Count; i++)
+                {
+                    if (listView1.Items[i].Text == txt)
+                    {
+                        Stuff.Warning($"{txt} already was added", this);
+                        return;
+                    }
+                }
+                listView1.Items.Add(new ListViewItem(new string[] { txt, string.Empty, string.Empty }) { Tag = DownloadFileInfo.Create(txt) });                
+            }
+            catch (Exception ex)
+            {            
+
+            }
         }
     }
 }
