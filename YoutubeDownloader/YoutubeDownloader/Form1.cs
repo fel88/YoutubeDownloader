@@ -6,6 +6,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 
@@ -117,7 +119,7 @@ namespace YoutubeDownloader
         Process p;
 
         void download(string exePath, string args)
-        {            
+        {
             Directory.CreateDirectory("Downloads");
             ProcessStartInfo pci = new ProcessStartInfo(exePath)
             {
@@ -134,12 +136,46 @@ namespace YoutubeDownloader
             p.StartInfo.RedirectStandardError = true;
             p.Exited += P_Exited;
             p.StartInfo.RedirectStandardOutput = true;
+            //p.StartInfo.StandardOutputEncoding = Encoding.GetEncoding(850);
+
 
             lastDownloadInfo = null;
 
             p.Start();
 
             p.BeginOutputReadLine();
+
+            bool good = true;
+            if (useTimeout)
+            {
+                if (!p.WaitForExit(timeout))
+                {
+                    PrintText("wait time expired. terminate");
+
+                    var l = GetListItem(args.Trim());
+                    UpdateListViewItem(l, (item) =>
+                    {
+                        (l.Tag as DownloadFileInfo).State = DownloadStateEnum.Timeout;
+                        item.BackColor = Color.Red;
+                        item.SubItems[2].Text = "timeout";
+                    });
+                    good = false;
+
+                    p.Kill();
+                }
+            }
+            else
+            {
+                p.WaitForExit();
+            }
+            if (good)
+            {
+                var l = GetListItem(args.Trim());
+                UpdateListViewItem(l, (item) =>
+                {
+                    (l.Tag as DownloadFileInfo).State = DownloadStateEnum.Downloaded;
+                });
+            }
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -149,23 +185,39 @@ namespace YoutubeDownloader
                 Stuff.Warning($"File {textBox1.Text} doesn't exist", this);
                 return;
             }
-
+            List<string> list = new List<string>();
+            foreach (var item in listView1.Items)
+            {
+                list.Add((item as ListViewItem).Text);
+            }
+            var path = textBox1.Text;
+            DownloadList(list.ToArray(), path);
+            /*
             StringBuilder sb = new StringBuilder();
             foreach (var item in listView1.Items)
             {
                 sb.Append((item as ListViewItem).Text + " ");
             }
-            download(textBox1.Text, sb.ToString());
+            download(textBox1.Text, sb.ToString());*/
+        }
+
+        private void DownloadList(string[] list, string path)
+        {
+            Thread th = new Thread(() =>
+            {
+                foreach (var item in list)
+                {
+                    download(path, item);
+                }
+                PrintText("well done.");
+            });
+            th.IsBackground = true;
+            th.Start();
         }
 
         private void P_Exited(object sender, EventArgs e)
         {
-            richTextBox1.Invoke((Action)(() =>
-            {
-                richTextBox1.AppendText("terminated");
-                richTextBox1.SelectionStart = richTextBox1.Text.Length;
-                richTextBox1.ScrollToCaret();
-            }));
+            PrintText("terminated");
         }
 
         ListViewItem GetListItem(string hash)
@@ -199,7 +251,7 @@ namespace YoutubeDownloader
         private void P_OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
             if (e.Data == null) return;
-            
+
             if (e.Data.Contains("has already been downloaded"))
             {
                 var ind = e.Data.IndexOf(':');
@@ -273,23 +325,36 @@ namespace YoutubeDownloader
                     }
                 }
             }
+            PrintText(e.Data + Environment.NewLine);
+        }
+
+        public void PrintText(string text)
+        {
             richTextBox1.Invoke((Action)(() =>
             {
-                richTextBox1.AppendText(e.Data + Environment.NewLine);
+                richTextBox1.AppendText(text);
                 richTextBox1.SelectionStart = richTextBox1.Text.Length;
                 richTextBox1.ScrollToCaret();
             }));
 
         }
 
+        public bool Question(string text)
+        {
+            return MessageBox.Show(text, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+        }
+
         private void clearToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (!Question("Are you sure to clear list?")) return;
             listView1.Items.Clear();
         }
 
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (listView1.SelectedItems.Count == 0) return;
+            if (!Question($"Are you sure to delete {listView1.SelectedItems.Count} items?")) return;
+
             List<ListViewItem> toDel = new List<ListViewItem>();
             for (int i = 0; i < listView1.SelectedItems.Count; i++)
             {
@@ -364,9 +429,24 @@ namespace YoutubeDownloader
         {
             if (listView1.SelectedItems.Count == 0) return;
             var d = (listView1.SelectedItems[0].Tag as DownloadFileInfo);
-            if (!d.IsDownloaded) return;
+            if (d.State != DownloadStateEnum.Downloaded) return;
 
-            Process.Start(Path.Combine("Downloads", d.FilePath));
+            var path = Path.Combine("Downloads", d.FilePath);
+            if (!File.Exists(path))
+            {
+                var dir = new DirectoryInfo("Downloads");
+
+                foreach (var item in dir.GetFiles())
+                {
+                    if (item.Name.Contains($"[{d.Hash}]"))
+                    {
+                        Process.Start(item.FullName);
+                        break;
+                    }
+                }
+            }
+            else
+                Process.Start(path);
         }
 
         private void downloadSelectedToolStripMenuItem_Click(object sender, EventArgs e)
@@ -376,13 +456,21 @@ namespace YoutubeDownloader
                 Stuff.Warning($"File {textBox1.Text} doesn't exist", this);
                 return;
             }
-
-            StringBuilder sb = new StringBuilder();
+            List<string> list = new List<string>();
             foreach (var item in listView1.SelectedItems)
             {
-                sb.Append((item as ListViewItem).Text + " ");
+                list.Add((item as ListViewItem).Text);
             }
-            download(textBox1.Text, sb.ToString());
+            var path = textBox1.Text;
+            DownloadList(list.ToArray(), path);
+
+            /* StringBuilder sb = new StringBuilder();
+             foreach (var item in listView1.SelectedItems)
+             {
+                 //sb.Append((item as ListViewItem).Text + " ");
+                 download(textBox1.Text, (item as ListViewItem).Text + " ");
+             }*/
+            //download(textBox1.Text, sb.ToString());
         }
 
         private void pasteURLToolStripMenuItem_Click(object sender, EventArgs e)
@@ -399,11 +487,37 @@ namespace YoutubeDownloader
                         return;
                     }
                 }
-                listView1.Items.Add(new ListViewItem(new string[] { txt, string.Empty, string.Empty }) { Tag = DownloadFileInfo.Create(txt) });                
+                listView1.Items.Add(new ListViewItem(new string[] { txt, string.Empty, string.Empty }) { Tag = DownloadFileInfo.Create(txt) });
             }
             catch (Exception ex)
-            {            
+            {
 
+            }
+        }
+        bool useTimeout = true;
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            useTimeout = checkBox1.Checked;
+        }
+        int timeout = 30 * 1000;
+        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        {
+            timeout = (int)numericUpDown1.Value * 1000;
+        }
+
+        private void removeAllDownloadedToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            List<ListViewItem> toDel = new List<ListViewItem>();
+            for (int i = 0; i < listView1.Items.Count; i++)
+            {
+                if ((listView1.Items[i].Tag as DownloadFileInfo).State != DownloadStateEnum.Downloaded)
+                    continue;
+
+                toDel.Add(listView1.Items[i]);
+            }
+            foreach (var t in toDel)
+            {
+                listView1.Items.Remove(t);
             }
         }
     }
