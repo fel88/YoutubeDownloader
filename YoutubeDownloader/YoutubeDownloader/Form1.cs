@@ -463,38 +463,34 @@ namespace YoutubeDownloader
             }
             var path = textBox1.Text;
             DownloadList(list.ToArray(), path);
-
-            /* StringBuilder sb = new StringBuilder();
-             foreach (var item in listView1.SelectedItems)
-             {
-                 //sb.Append((item as ListViewItem).Text + " ");
-                 download(textBox1.Text, (item as ListViewItem).Text + " ");
-             }*/
-            //download(textBox1.Text, sb.ToString());
         }
 
         private void pasteURLToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try
             {
-                var txt = Clipboard.GetText();
-                new Uri(txt);
-                for (int i = 0; i < listView1.Items.Count; i++)
+                var txts = Clipboard.GetText().Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToArray();
+                foreach (var _txt in txts)
                 {
-                    if (listView1.Items[i].Text == txt)
+                    var txt = _txt.Trim();
+                    new Uri(txt);
+                    for (int i = 0; i < listView1.Items.Count; i++)
                     {
-                        Stuff.Warning($"{txt} already was added", this);
-                        return;
+                        if (listView1.Items[i].Text == txt)
+                        {
+                            Stuff.Warning($"{txt} already was added", this);
+                            continue;
+                        }
                     }
+                    listView1.Items.Add(new ListViewItem(new string[] { txt, string.Empty, string.Empty }) { Tag = DownloadFileInfo.Create(txt) });
                 }
-                listView1.Items.Add(new ListViewItem(new string[] { txt, string.Empty, string.Empty }) { Tag = DownloadFileInfo.Create(txt) });
             }
             catch (Exception ex)
             {
 
             }
         }
-        bool useTimeout = true;
+        bool useTimeout = false;
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
             useTimeout = checkBox1.Checked;

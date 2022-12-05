@@ -47,6 +47,7 @@
             this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pasteURLToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeAllDownloadedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.downloadListToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -58,9 +59,8 @@
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.button2 = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
-            this.removeAllDownloadedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.contextMenuStrip1.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -213,6 +213,13 @@
             this.pasteURLToolStripMenuItem.Text = "paste URL";
             this.pasteURLToolStripMenuItem.Click += new System.EventHandler(this.pasteURLToolStripMenuItem_Click);
             // 
+            // removeAllDownloadedToolStripMenuItem
+            // 
+            this.removeAllDownloadedToolStripMenuItem.Name = "removeAllDownloadedToolStripMenuItem";
+            this.removeAllDownloadedToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
+            this.removeAllDownloadedToolStripMenuItem.Text = "remove all downloaded";
+            this.removeAllDownloadedToolStripMenuItem.Click += new System.EventHandler(this.removeAllDownloadedToolStripMenuItem_Click);
+            // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
@@ -325,19 +332,6 @@
             this.panel1.Size = new System.Drawing.Size(707, 94);
             this.panel1.TabIndex = 19;
             // 
-            // checkBox1
-            // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Checked = true;
-            this.checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox1.Location = new System.Drawing.Point(9, 67);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(106, 17);
-            this.checkBox1.TabIndex = 20;
-            this.checkBox1.Text = "use timeout (sec)";
-            this.checkBox1.UseVisualStyleBackColor = true;
-            this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
-            // 
             // numericUpDown1
             // 
             this.numericUpDown1.Location = new System.Drawing.Point(121, 64);
@@ -356,12 +350,16 @@
             0});
             this.numericUpDown1.ValueChanged += new System.EventHandler(this.numericUpDown1_ValueChanged);
             // 
-            // removeAllDownloadedToolStripMenuItem
+            // checkBox1
             // 
-            this.removeAllDownloadedToolStripMenuItem.Name = "removeAllDownloadedToolStripMenuItem";
-            this.removeAllDownloadedToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
-            this.removeAllDownloadedToolStripMenuItem.Text = "remove all downloaded";
-            this.removeAllDownloadedToolStripMenuItem.Click += new System.EventHandler(this.removeAllDownloadedToolStripMenuItem_Click);
+            this.checkBox1.AutoSize = true;
+            this.checkBox1.Location = new System.Drawing.Point(9, 67);
+            this.checkBox1.Name = "checkBox1";
+            this.checkBox1.Size = new System.Drawing.Size(106, 17);
+            this.checkBox1.TabIndex = 20;
+            this.checkBox1.Text = "use timeout (sec)";
+            this.checkBox1.UseVisualStyleBackColor = true;
+            this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
             // 
             // Form1
             // 
