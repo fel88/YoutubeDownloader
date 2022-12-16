@@ -1,0 +1,1 @@
+middle.exe %1 | %2 -ss %3 -to %4 -i -  -vn -acodec copy %5

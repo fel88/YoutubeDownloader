@@ -73,8 +73,19 @@ namespace ffmpegGui
                 File.Delete("out1.aac");
             }
             var b64 = Convert.ToBase64String(Encoding.Default.GetBytes(textBox1.Text));
-            ProcessStartInfo psi = new ProcessStartInfo("bat.bat");
-            psi.Arguments = "\"" + b64 + "\" \"" + textBox2.Text + "\" " + "out1.aac";
+            ProcessStartInfo psi = null;
+            if (trimEnabled)
+            {
+                psi = new ProcessStartInfo("bat2.bat");
+                psi.Arguments = $"\"{b64}\" \"{textBox2.Text}\" {startTime} {endTime} out1.aac";
+            }
+            else
+            {
+                psi = new ProcessStartInfo("bat.bat"); 
+                psi.Arguments = $"\"{b64}\" \"{textBox2.Text}\" out1.aac";                
+            }
+
+          
             psi.CreateNoWindow = true;
             psi.UseShellExecute = false;
 
@@ -108,6 +119,38 @@ namespace ffmpegGui
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.ShowDialog();
             textBox1.Text = ofd.FileName;
+        }
+
+        bool trimEnabled = false;
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            trimEnabled = checkBox1.Checked;
+        }
+
+        TimeSpan startTime = new TimeSpan();
+        TimeSpan endTime = new TimeSpan();
+        private void textBox3_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                startTime = TimeSpan.Parse(textBox3.Text);
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
+        private void textBox4_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                endTime = TimeSpan.Parse(textBox4.Text);
+            }
+            catch (Exception ex)
+            {
+
+            }
         }
     }
 }
