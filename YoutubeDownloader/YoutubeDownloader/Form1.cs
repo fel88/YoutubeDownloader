@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -41,6 +42,7 @@ namespace YoutubeDownloader
             {
                 var doc = XDocument.Load("settings.xml");
                 textBox1.Text = doc.Element("settings").Element("extras").Element("ytdlp").Element("exePath").Value;
+                ffmpegPath = doc.Element("settings").Element("extras").Element("ffmpeg").Element("exePath").Value;
             }
             catch (Exception ex)
             {
@@ -54,40 +56,61 @@ namespace YoutubeDownloader
             if (ofd.ShowDialog() != DialogResult.OK) return;
             textBox1.Text = ofd.FileName;
 
+            UpdateSettings();
+        }
+
+        public void UpdateSettings()
+        {
             //update setting
-            if (File.Exists("settings.xml"))
+            if (!File.Exists("settings.xml"))
+                return;
+
+            try
             {
-                try
+                var doc = XDocument.Load("settings.xml");
+                var fr = doc.Descendants("settings").First();
+                var ext = fr.Element("extras");
+                if (ext == null)
                 {
-                    var doc = XDocument.Load("settings.xml");
-                    var fr = doc.Descendants("settings").First();
-                    var ext = fr.Element("extras");
-                    if (ext == null)
-                    {
-                        fr.Add(new XElement("extras"));
-                        ext = fr.Element("extras");
-                    }
-                    var ytdlp = ext.Element("ytdlp");
-                    if (ytdlp == null)
-                    {
-                        ext.Add(new XElement("ytdlp"));
-                        ytdlp = ext.Element("ytdlp");
-                    }
-                    var exep = ytdlp.Element("exePath");
-                    if (exep == null)
-                    {
-                        ytdlp.Add(new XElement("exePath"));
-                        exep = ytdlp.Element("exePath");
-                    }
-                    exep.ReplaceNodes(new XCData(textBox1.Text));
-
-                    doc.Save("settings.xml");
+                    fr.Add(new XElement("extras"));
+                    ext = fr.Element("extras");
                 }
-                catch (Exception ex)
+                var ffmpeg = ext.Element("ffmpeg");
+                if (ffmpeg == null)
                 {
-
+                    ext.Add(new XElement("ffmpeg"));
+                    ffmpeg = ext.Element("ffmpeg");
                 }
+                var exep2 = ffmpeg.Element("exePath");
+                if (exep2 == null)
+                {
+                    ffmpeg.Add(new XElement("exePath"));
+                    exep2 = ffmpeg.Element("exePath");
+                }
+                exep2.ReplaceNodes(new XCData(ffmpegPath));
+
+                var ytdlp = ext.Element("ytdlp");
+                if (ytdlp == null)
+                {
+                    ext.Add(new XElement("ytdlp"));
+                    ytdlp = ext.Element("ytdlp");
+                }
+
+                var exep = ytdlp.Element("exePath");
+                if (exep == null)
+                {
+                    ytdlp.Add(new XElement("exePath"));
+                    exep = ytdlp.Element("exePath");
+                }
+                exep.ReplaceNodes(new XCData(textBox1.Text));
+
+                doc.Save("settings.xml");
             }
+            catch (Exception ex)
+            {
+
+            }
+
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -118,17 +141,21 @@ namespace YoutubeDownloader
 
         Process p;
 
-        void download(string exePath, string args)
+        void download(string exePath, string args, string preArgs = "")
         {
             Directory.CreateDirectory("Downloads");
             ProcessStartInfo pci = new ProcessStartInfo(exePath)
             {
-                Arguments = args,
+                Arguments = $"{preArgs} {args}",
                 WorkingDirectory = "Downloads",
                 CreateNoWindow = true
             };
             p = new Process();
             p.StartInfo = pci;
+
+            //p.StartInfo.StandardOutputEncoding = Encoding.GetEncoding(65001);
+            //p.StartInfo.StandardErrorEncoding = Encoding.GetEncoding(65001);
+
             p.EnableRaisingEvents = true;
             p.OutputDataReceived += P_OutputDataReceived;
             p.ErrorDataReceived += P_OutputDataReceived;
@@ -173,42 +200,24 @@ namespace YoutubeDownloader
                 var l = GetListItem(args.Trim());
                 UpdateListViewItem(l, (item) =>
                 {
-                    (l.Tag as DownloadFileInfo).State = DownloadStateEnum.Downloaded;
+                    var dd = l.Tag as DownloadFileInfo;
+                    dd.State = DownloadStateEnum.Downloaded;
                 });
             }
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            if (!File.Exists(textBox1.Text))
-            {
-                Stuff.Warning($"File {textBox1.Text} doesn't exist", this);
-                return;
-            }
-            List<string> list = new List<string>();
-            foreach (var item in listView1.Items)
-            {
-                list.Add((item as ListViewItem).Text);
-            }
-            var path = textBox1.Text;
-            DownloadList(list.ToArray(), path);
-            /*
-            StringBuilder sb = new StringBuilder();
-            foreach (var item in listView1.Items)
-            {
-                sb.Append((item as ListViewItem).Text + " ");
-            }
-            download(textBox1.Text, sb.ToString());*/
+            DownloadItems(listView1.Items);
         }
 
-        private void DownloadList(string[] list, string path)
+        private void DownloadList(string[] list, string path, string preArgs = "")
         {
             Thread th = new Thread(() =>
             {
                 foreach (var item in list)
-                {
-                    download(path, item);
-                }
+                    download(path, item, preArgs);
+
                 PrintText("well done.");
             });
             th.IsBackground = true;
@@ -255,11 +264,22 @@ namespace YoutubeDownloader
             if (e.Data.Contains("has already been downloaded"))
             {
                 var ind = e.Data.IndexOf(':');
-                var name = e.Data.Substring(ind + 1).Replace("[download]", "").Replace("has already been downloaded", "").Trim();
+                var name = e.Data.Substring(ind + 1).Replace("[download]", "").Replace("has already been downloaded", "").Trim();              
                 var ind2 = e.Data.LastIndexOf('[');
                 var ind3 = e.Data.LastIndexOf(']');
                 var url = e.Data.Substring(ind2 + 1, ind3 - ind2 - 1);
-                var l = GetListItem(url);
+                var l = GetListItem(url);                 
+                
+                var dd = l.Tag as DownloadFileInfo;
+                try
+                {
+                    var ff = Path.GetFileName(SearchFileByHash(dd.Hash));
+                    name = ff;
+                }
+                catch (Exception ex)
+                {
+
+                }
                 UpdateListViewItem(l, (item) =>
                 {
                     item.SubItems[1].Text = name;
@@ -280,6 +300,17 @@ namespace YoutubeDownloader
                     var ind3 = e.Data.LastIndexOf(']');
                     var url = e.Data.Substring(ind2 + 1, ind3 - ind2 - 1);
                     var l = GetListItem(url);
+
+                    var dd = l.Tag as DownloadFileInfo;
+                    try
+                    {
+                        var ff = Path.GetFileName(SearchFileByHash(dd.Hash));
+                        name = ff;
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
 
                     UpdateListViewItem(l, (item) =>
                     {
@@ -448,8 +479,7 @@ namespace YoutubeDownloader
             else
                 Process.Start(path);
         }
-
-        private void downloadSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+        public void DownloadItems(IEnumerable items)
         {
             if (!File.Exists(textBox1.Text))
             {
@@ -457,12 +487,32 @@ namespace YoutubeDownloader
                 return;
             }
             List<string> list = new List<string>();
-            foreach (var item in listView1.SelectedItems)
+            foreach (var item in items)
             {
                 list.Add((item as ListViewItem).Text);
             }
             var path = textBox1.Text;
-            DownloadList(list.ToArray(), path);
+            //--ffmpeg-location C:\Users\fel\Downloads\ffmpeg-master-latest-win64-gpl-shared\ffmpeg-master-latest-win64-gpl-shared\bin 
+            string preArgs = string.Empty;
+
+            if (mode == 1)
+            {
+                preArgs = @"--sub-lang ru --skip-download --write-auto-sub ";
+            }
+            if (srt)
+            {
+                if (string.IsNullOrEmpty(ffmpegPath) || !Directory.Exists(ffmpegPath))
+                    MessageBox.Show("SRT not available. Fix ffmpeg path", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else
+                    preArgs += $"--convert-subs=srt  --ffmpeg-location {ffmpegPath}";
+            }
+
+            DownloadList(list.ToArray(), path, preArgs);
+        }
+
+        private void downloadSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            DownloadItems(listView1.SelectedItems);
         }
 
         private void pasteURLToolStripMenuItem_Click(object sender, EventArgs e)
@@ -474,14 +524,19 @@ namespace YoutubeDownloader
                 {
                     var txt = _txt.Trim();
                     new Uri(txt);
+                    bool exit = false;
                     for (int i = 0; i < listView1.Items.Count; i++)
                     {
                         if (listView1.Items[i].Text == txt)
                         {
                             Stuff.Warning($"{txt} already was added", this);
-                            continue;
+                            exit = true;
+                            break;
                         }
                     }
+                    if (exit)
+                        continue;
+
                     listView1.Items.Add(new ListViewItem(new string[] { txt, string.Empty, string.Empty }) { Tag = DownloadFileInfo.Create(txt) });
                 }
             }
@@ -515,6 +570,70 @@ namespace YoutubeDownloader
             {
                 listView1.Items.Remove(t);
             }
+        }
+
+        int mode = 0;
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            mode = comboBox1.SelectedIndex;
+        }
+
+        string ffmpegPath = "";
+        private void button5_Click(object sender, EventArgs e)
+        {
+            var d = AutoDialog.DialogHelpers.StartDialog();
+            d.AddStringField("ffmpeg", "FFmpeg path", ffmpegPath);
+            if (!d.ShowDialog())
+                return;
+
+            ffmpegPath = d.GetStringField("ffmpeg");
+            UpdateSettings();
+        }
+
+        bool srt = false;
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            srt = checkBox2.Checked;
+        }
+
+        bool cleanSubtitles = false;
+        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        {
+            cleanSubtitles = checkBox3.Checked;
+
+        }
+
+        public string SearchFileByHash(string hash)
+        {
+            var dir = new DirectoryInfo("Downloads");
+
+            foreach (var item in dir.GetFiles())
+            {
+                if (item.Name.Contains($"[{hash}]"))
+                {
+                    return item.FullName;
+                }
+            }
+            return null;
+        }
+
+        private void locateInExplorerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (listView1.SelectedItems.Count == 0)
+                return;
+
+            var d = (listView1.SelectedItems[0].Tag as DownloadFileInfo);
+            if (!d.IsDownloaded)
+                return;
+
+            var file = SearchFileByHash(d.Hash);
+
+            string args = string.Format("/e, /select, \"{0}\"", file);
+
+            ProcessStartInfo info = new ProcessStartInfo();
+            info.FileName = "explorer";
+            info.Arguments = args;
+            Process.Start(info);
         }
     }
 }

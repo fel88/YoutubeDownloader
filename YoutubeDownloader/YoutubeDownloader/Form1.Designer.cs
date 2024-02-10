@@ -61,6 +61,12 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.button5 = new System.Windows.Forms.Button();
+            this.checkBox2 = new System.Windows.Forms.CheckBox();
+            this.checkBox3 = new System.Windows.Forms.CheckBox();
+            this.locateInExplorerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.contextMenuStrip1.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -151,6 +157,7 @@
             // 
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openToolStripMenuItem,
+            this.locateInExplorerToolStripMenuItem,
             this.clearToolStripMenuItem,
             this.deleteToolStripMenuItem,
             this.copyToolStripMenuItem,
@@ -160,7 +167,7 @@
             this.downloadListToolStripMenuItem,
             this.downloadSelectedToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(199, 208);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(199, 230);
             // 
             // openToolStripMenuItem
             // 
@@ -318,6 +325,11 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.checkBox3);
+            this.panel1.Controls.Add(this.checkBox2);
+            this.panel1.Controls.Add(this.button5);
+            this.panel1.Controls.Add(this.label2);
+            this.panel1.Controls.Add(this.comboBox1);
             this.panel1.Controls.Add(this.numericUpDown1);
             this.panel1.Controls.Add(this.checkBox1);
             this.panel1.Controls.Add(this.label1);
@@ -360,6 +372,67 @@
             this.checkBox1.Text = "use timeout (sec)";
             this.checkBox1.UseVisualStyleBackColor = true;
             this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
+            // 
+            // comboBox1
+            // 
+            this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBox1.FormattingEnabled = true;
+            this.comboBox1.Items.AddRange(new object[] {
+            "Video",
+            "Subtitles"});
+            this.comboBox1.Location = new System.Drawing.Point(286, 67);
+            this.comboBox1.Name = "comboBox1";
+            this.comboBox1.Size = new System.Drawing.Size(121, 21);
+            this.comboBox1.TabIndex = 22;
+            this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(246, 73);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(34, 13);
+            this.label2.TabIndex = 23;
+            this.label2.Text = "Mode";
+            // 
+            // button5
+            // 
+            this.button5.Location = new System.Drawing.Point(609, 63);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(88, 23);
+            this.button5.TabIndex = 24;
+            this.button5.Text = "Settings";
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
+            // 
+            // checkBox2
+            // 
+            this.checkBox2.AutoSize = true;
+            this.checkBox2.Location = new System.Drawing.Point(428, 69);
+            this.checkBox2.Name = "checkBox2";
+            this.checkBox2.Size = new System.Drawing.Size(37, 17);
+            this.checkBox2.TabIndex = 25;
+            this.checkBox2.Text = "srt";
+            this.checkBox2.UseVisualStyleBackColor = true;
+            this.checkBox2.CheckedChanged += new System.EventHandler(this.checkBox2_CheckedChanged);
+            // 
+            // checkBox3
+            // 
+            this.checkBox3.AutoSize = true;
+            this.checkBox3.Location = new System.Drawing.Point(471, 69);
+            this.checkBox3.Name = "checkBox3";
+            this.checkBox3.Size = new System.Drawing.Size(93, 17);
+            this.checkBox3.TabIndex = 26;
+            this.checkBox3.Text = "clean subtitles";
+            this.checkBox3.UseVisualStyleBackColor = true;
+            this.checkBox3.CheckedChanged += new System.EventHandler(this.checkBox3_CheckedChanged);
+            // 
+            // locateInExplorerToolStripMenuItem
+            // 
+            this.locateInExplorerToolStripMenuItem.Name = "locateInExplorerToolStripMenuItem";
+            this.locateInExplorerToolStripMenuItem.Size = new System.Drawing.Size(198, 22);
+            this.locateInExplorerToolStripMenuItem.Text = "locate in explorer";
+            this.locateInExplorerToolStripMenuItem.Click += new System.EventHandler(this.locateInExplorerToolStripMenuItem_Click);
             // 
             // Form1
             // 
@@ -414,6 +487,12 @@
         private System.Windows.Forms.NumericUpDown numericUpDown1;
         private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.ToolStripMenuItem removeAllDownloadedToolStripMenuItem;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.ComboBox comboBox1;
+        private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.CheckBox checkBox3;
+        private System.Windows.Forms.CheckBox checkBox2;
+        private System.Windows.Forms.ToolStripMenuItem locateInExplorerToolStripMenuItem;
     }
 }
 
