@@ -264,12 +264,12 @@ namespace YoutubeDownloader
             if (e.Data.Contains("has already been downloaded"))
             {
                 var ind = e.Data.IndexOf(':');
-                var name = e.Data.Substring(ind + 1).Replace("[download]", "").Replace("has already been downloaded", "").Trim();              
+                var name = e.Data.Substring(ind + 1).Replace("[download]", "").Replace("has already been downloaded", "").Trim();
                 var ind2 = e.Data.LastIndexOf('[');
                 var ind3 = e.Data.LastIndexOf(']');
                 var url = e.Data.Substring(ind2 + 1, ind3 - ind2 - 1);
-                var l = GetListItem(url);                 
-                
+                var l = GetListItem(url);
+
                 var dd = l.Tag as DownloadFileInfo;
                 try
                 {
@@ -383,8 +383,11 @@ namespace YoutubeDownloader
 
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (listView1.SelectedItems.Count == 0) return;
-            if (!Question($"Are you sure to delete {listView1.SelectedItems.Count} items?")) return;
+            if (listView1.SelectedItems.Count == 0)
+                return;
+
+            if (!Question($"Are you sure to delete {listView1.SelectedItems.Count} items?"))
+                return;
 
             List<ListViewItem> toDel = new List<ListViewItem>();
             for (int i = 0; i < listView1.SelectedItems.Count; i++)
@@ -400,10 +403,13 @@ namespace YoutubeDownloader
         private void button4_Click(object sender, EventArgs e)
         {
             if (!Directory.Exists("Downloads"))
-            {
                 Directory.CreateDirectory("Downloads");
-            }
-            Process.Start("Downloads");
+
+            Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "Downloads",
+                UseShellExecute = true
+            });
         }
 
         private void copyToolStripMenuItem_Click(object sender, EventArgs e)
@@ -583,6 +589,15 @@ namespace YoutubeDownloader
         {
             var d = AutoDialog.DialogHelpers.StartDialog();
             d.AddStringField("ffmpeg", "FFmpeg path", ffmpegPath);
+            d.AddCustomDialogField("ffmpegBtn", "FFmpeg locate", () =>
+            {
+                OpenFileDialog ofd = new OpenFileDialog();
+                if (ofd.ShowDialog() != DialogResult.OK)
+                    return;
+
+                d.CreatedControls["ffmpeg"][1].Text = ofd.FileName;
+            });
+
             if (!d.ShowDialog())
                 return;
 
@@ -633,7 +648,81 @@ namespace YoutubeDownloader
             ProcessStartInfo info = new ProcessStartInfo();
             info.FileName = "explorer";
             info.Arguments = args;
+            info.UseShellExecute = true;
             Process.Start(info);
+        }
+        public async Task ExtractAudioAsync(string inputVideoPath, string outputAudioPath, string ffmpegPath)
+        {
+            // FFmpeg arguments for extracting audio:
+            // -i: Input file path
+            // -vn: Disable video recording (only process audio)
+            // -acodec copy: Copy the audio codec without re-encoding (fastest method)
+            // or use: -f mp3 -ab 192k (to force encoding to mp3 at 192kbps)
+            string arguments = $"-i \"{inputVideoPath}\" -vn -acodec copy \"{outputAudioPath}\"";
+
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = ffmpegPath, // Path to your ffmpeg.exe
+                Arguments = arguments,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true // Useful for debugging errors
+            };
+
+            using var process = new Process { StartInfo = processStartInfo };
+
+            // Optional: Handle output and error streams for real-time feedback
+            process.OutputDataReceived += (sender, args) => PrintText(args.Data);
+            process.ErrorDataReceived += (sender, args) => PrintText(args.Data);
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            // Wait asynchronously for the process to exit
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode == 0)
+                PrintText($"Audio successfully extracted to {outputAudioPath}");
+            else
+                PrintText($"FFmpeg process failed with exit code: {process.ExitCode}");
+
+        }
+
+        private async void extractAudioToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
+            {
+                MessageBox.Show($"You have to set FFMPEG path first", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (listView1.SelectedItems.Count == 0)
+                return;
+
+            for (int i = 0; i < listView1.SelectedItems.Count; i++)
+            {
+                var t = listView1.SelectedItems[i];
+                var dfi = (t.Tag as DownloadFileInfo);
+                await ExtractAudioAsync(Path.Combine("Downloads", dfi.FilePath), Path.Combine("Downloads", $"{dfi.FilePath}.aac"), ffmpegPath);
+            }
+        }
+
+        private async void button6_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(ffmpegPath) || !File.Exists(ffmpegPath))
+            {
+                MessageBox.Show($"You have to set FFMPEG path first", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            OpenFileDialog ofd = new OpenFileDialog();
+            if (ofd.ShowDialog() != DialogResult.OK)
+                return;
+
+            await ExtractAudioAsync(ofd.FileName, $"{ofd.FileName}.aac", ffmpegPath);
+            MessageBox.Show($"Done: {ofd.FileName}.aac", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }
