@@ -651,7 +651,7 @@ namespace YoutubeDownloader
             info.UseShellExecute = true;
             Process.Start(info);
         }
-        public async Task ExtractAudioAsync(string inputVideoPath, string outputAudioPath, string ffmpegPath)
+        public async Task ExtractAudioAsync(string inputVideoPath, string outputAudioPath, string ffmpegPath, bool mp3 = true)
         {
             // FFmpeg arguments for extracting audio:
             // -i: Input file path
@@ -659,6 +659,8 @@ namespace YoutubeDownloader
             // -acodec copy: Copy the audio codec without re-encoding (fastest method)
             // or use: -f mp3 -ab 192k (to force encoding to mp3 at 192kbps)
             string arguments = $"-i \"{inputVideoPath}\" -vn -acodec copy \"{outputAudioPath}\"";
+            if (mp3)
+                arguments = $"-i \"{inputVideoPath}\" -vn -f mp3 -ab 192k \"{outputAudioPath}\"";
 
             var processStartInfo = new ProcessStartInfo
             {
@@ -705,7 +707,7 @@ namespace YoutubeDownloader
             {
                 var t = listView1.SelectedItems[i];
                 var dfi = (t.Tag as DownloadFileInfo);
-                await ExtractAudioAsync(Path.Combine("Downloads", dfi.FilePath), Path.Combine("Downloads", $"{dfi.FilePath}.aac"), ffmpegPath);
+                await ExtractAudioAsync(Path.Combine("Downloads", dfi.FilePath), Path.Combine("Downloads", $"{dfi.FilePath}.mp3"), ffmpegPath);
             }
         }
 
@@ -721,8 +723,8 @@ namespace YoutubeDownloader
             if (ofd.ShowDialog() != DialogResult.OK)
                 return;
 
-            await ExtractAudioAsync(ofd.FileName, $"{ofd.FileName}.aac", ffmpegPath);
-            MessageBox.Show($"Done: {ofd.FileName}.aac", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            await ExtractAudioAsync(ofd.FileName, $"{ofd.FileName}.mp3", ffmpegPath);
+            MessageBox.Show($"Done: {ofd.FileName}.mp3", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }
