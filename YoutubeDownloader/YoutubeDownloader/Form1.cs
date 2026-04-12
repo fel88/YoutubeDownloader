@@ -43,6 +43,7 @@ namespace YoutubeDownloader
                 var doc = XDocument.Load("settings.xml");
                 textBox1.Text = doc.Element("settings").Element("extras").Element("ytdlp").Element("exePath").Value;
                 ffmpegPath = doc.Element("settings").Element("extras").Element("ffmpeg").Element("exePath").Value;
+                ytdlpArgs = doc.Element("settings").Element("extras").Element("ytdlp").Element("args").Value;
             }
             catch (Exception ex)
             {
@@ -53,7 +54,9 @@ namespace YoutubeDownloader
         {
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.Filter = "exe files|*.exe";
-            if (ofd.ShowDialog() != DialogResult.OK) return;
+            if (ofd.ShowDialog() != DialogResult.OK) 
+                return;
+
             textBox1.Text = ofd.FileName;
 
             UpdateSettings();
@@ -95,6 +98,8 @@ namespace YoutubeDownloader
                     ext.Add(new XElement("ytdlp"));
                     ytdlp = ext.Element("ytdlp");
                 }
+                if (ytdlp.Element("args") == null)
+                    ytdlp.Add(new XElement("args", new XCData(ytdlpArgs)));
 
                 var exep = ytdlp.Element("exePath");
                 if (exep == null)
@@ -499,11 +504,11 @@ namespace YoutubeDownloader
             }
             var path = textBox1.Text;
             //--ffmpeg-location C:\Users\fel\Downloads\ffmpeg-master-latest-win64-gpl-shared\ffmpeg-master-latest-win64-gpl-shared\bin 
-            string preArgs = string.Empty;
+            string preArgs = ytdlpArgs;
 
             if (mode == 1)
             {
-                preArgs = @"--sub-lang ru --skip-download --write-auto-sub ";
+                preArgs += @"--sub-lang ru --skip-download --write-auto-sub ";
             }
             if (srt)
             {
@@ -585,10 +590,12 @@ namespace YoutubeDownloader
         }
 
         string ffmpegPath = "";
+        string ytdlpArgs = "";
         private void button5_Click(object sender, EventArgs e)
         {
             var d = AutoDialog.DialogHelpers.StartDialog();
             d.AddStringField("ffmpeg", "FFmpeg path", ffmpegPath);
+            d.AddStringField("ytdlpArgs", "yt-dlp args", ytdlpArgs);
             d.AddCustomDialogField("ffmpegBtn", "FFmpeg locate", () =>
             {
                 OpenFileDialog ofd = new OpenFileDialog();
@@ -602,6 +609,7 @@ namespace YoutubeDownloader
                 return;
 
             ffmpegPath = d.GetStringField("ffmpeg");
+            ytdlpArgs = d.GetStringField("ytdlpArgs");
             UpdateSettings();
         }
 
